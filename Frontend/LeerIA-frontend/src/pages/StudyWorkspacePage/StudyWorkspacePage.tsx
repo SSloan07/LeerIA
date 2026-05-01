@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar";
-import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
-import { RightInspector } from "../../widgets/RightInspector/RightInspector";
+import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar"
+import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer"
+import { RightInspector } from "../../widgets/RightInspector/RightInspector"
 import { UploadHero } from "../../widgets/UploadHero/UploadHero";
 
 import { subjects } from "../../shared/data/mock-data";

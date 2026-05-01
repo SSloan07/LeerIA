@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router";
 
 import { StudyWorkspacePage } from "../pages/StudyWorkspacePage/StudyWorkspacePage";
-import { NotFoundPage } from "../pages/NotFoundPage/NotFoundPage";
+import { NotFoundPage } from "../pages/NotFoundPage/NotFoundPage"
 export const appRoutes = {
   home: "/",
   study: "/study",
