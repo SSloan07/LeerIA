@@ -10,6 +10,10 @@ class SubjectCreate(BaseModel):
     name: str 
     description: str | None = None 
 
+class SubjectUpdate(BaseModel): 
+    name: str | None = None
+    description: str | None = None
+
 class MessageCreate(BaseModel): 
     role: Literal["user","model"]
     content: str 
@@ -36,6 +40,6 @@ class DocumentChunkCreate(BaseModel):
 
 class ConversationCreate(BaseModel): 
     subject_id: UUID
-    title: str 
+    title: str = "Nueva Conversación"
 
 
