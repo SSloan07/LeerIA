@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 import shutil
+import os
 
 from app.database.database_call import supabase
 from app.models.entities import DocumentCreate
+from app.core.config import SUPABASE_BUCKET
+from app.api.v1.documentsUtils.document_auxiliary import clean_filename
 
 
 router = APIRouter()
@@ -61,79 +64,52 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
 
 
 @router.post("/upload")
-async def upload_document( subject_id: UUID = Form(...), file: UploadFile = File(...)):
+async def upload_document(
+    subject_id: str = Form(...),
+    file: UploadFile = File(...)
+):
+    bucket_name = os.getenv("SUPABASE_BUCKET", "documents")
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="El archivo no tiene nombre")
+
+    safe_filename = clean_filename(file.filename)
+
+    storage_path = f"subjects/{subject_id}/{safe_filename}"
+
+    file_bytes = await file.read()
+
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="El archivo está vacío")
 
     try:
-       
-        subject_response = (
-            supabase
-            .table("subjects")
-            .select("*")
-            .eq("id", str(subject_id))
-            .execute()
+        upload_response = supabase.storage.from_(bucket_name).upload(
+            path=storage_path,
+            file=file_bytes,
+            file_options={
+                "content-type": file.content_type or "application/octet-stream",
+                "upsert": "false"
+            }
         )
 
-        if not subject_response.data:
-            raise HTTPException(
-                status_code=404,
-                detail="La materia asociada no existe"
-            )
-
-        
-        if not file.filename:
-            raise HTTPException(
-                status_code=400,
-                detail="El archivo no tiene nombre"
-            )
-
-        file_extension = Path(file.filename).suffix.lower()
-
-        if file_extension not in ALLOWED_EXTENSIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Tipo de archivo no permitido: {file_extension}"
-            )
-
-        
-        subject_upload_dir = UPLOAD_DIR / str(subject_id)
-        subject_upload_dir.mkdir(parents=True, exist_ok=True)
-
-        
-        file_path = subject_upload_dir / file.filename
-
-        
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        
         document_data = {
-            "subject_id": str(subject_id),
-            "file_name": file.filename,
-            "file_type": file.content_type,
-            "storage_path": str(file_path),
-            "status": "uploaded",
+            "subject_id": subject_id,
+            "file_name": safe_filename,
+            "storage_path": storage_path,
+            "status": "uploaded"
         }
 
-        document_response = (
-            supabase
-            .table("documents")
-            .insert(document_data)
-            .execute()
-        )
+        db_response = supabase.table("documents").insert(document_data).execute()
 
         return {
-            "message": "Documento subido correctamente",
-            "data": document_response.data[0]
+            "message": "Archivo subido correctamente",
+            "bucket": bucket_name,
+            "storage_path": storage_path,
+            "document": db_response.data
         }
 
-    except HTTPException:
-        raise
-
-    except Exception as error:
+    except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error al subir documento: {str(error)}"
+            detail=f"Error subiendo archivo a Supabase: {str(e)}"
         )
-
-    finally:
-        await file.close()
