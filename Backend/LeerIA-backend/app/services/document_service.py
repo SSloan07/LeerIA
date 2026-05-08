@@ -6,8 +6,18 @@ from uuid import uuid4
 from datetime import datetime
 
 
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
+
+
+def get_file_extension(filename: str) -> str:
+    return Path(filename).suffix.lower()
+
+
+def is_allowed_file(filename: str) -> bool:
+    return get_file_extension(filename) in ALLOWED_EXTENSIONS
+
+
 def clean_filename(filename: str) -> str:
-    
     filename = os.path.basename(filename)
 
     path = Path(filename)
@@ -29,3 +39,8 @@ def clean_filename(filename: str) -> str:
     short_id = uuid4().hex[:8]
 
     return f"{date_prefix}_{stem}_{short_id}{extension}"
+
+
+def build_storage_path(subject_id: str, filename: str) -> str:
+    safe_filename = clean_filename(filename)
+    return f"subjects/{subject_id}/{safe_filename}"
