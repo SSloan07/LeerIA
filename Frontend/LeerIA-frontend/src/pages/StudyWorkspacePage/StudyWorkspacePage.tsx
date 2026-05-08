@@ -1,14 +1,49 @@
-import { useState } from "react";
-
-import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar"
-import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer"
-import { RightInspector } from "../../widgets/RightInspector/RightInspector"
+import { useEffect, useState } from "react";
+import { BookOpen } from "lucide-react";
+import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar";
+import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
+import { RightInspector } from "../../widgets/RightInspector/RightInspector";
 import { UploadHero } from "../../widgets/UploadHero/UploadHero";
+import type { Subject } from "../../shared/data/mock-data";
+import { getSubjects, type ApiSubject } from "../../shared/api/subjects";
 
-import { subjects } from "../../shared/data/mock-data";
+function mapApiSubjectToSidebarSubject(subject: ApiSubject): Subject {
+  return {
+    id: subject.id,
+    name: subject.name,
+    documents: 0,
+    status: "Activa",
+    icon: BookOpen,
+    iconClassName: "bg-emerald-400/15 text-emerald-300",
+  };
+}
 
 export function StudyWorkspacePage() {
-  const [selectedSubjectId, setSelectedSubjectId] = useState(subjects[0]?.id);
+  console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>();
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const apiSubjects = await getSubjects();
+        const sidebarSubjects = apiSubjects.map(mapApiSubjectToSidebarSubject);
+
+        setSubjects(sidebarSubjects);
+
+        if (sidebarSubjects.length > 0) {
+          setSelectedSubjectId(sidebarSubjects[0].id);
+        }
+      } catch (error) {
+        console.error("Error cargando materias:", error);
+      } finally {
+        setIsLoadingSubjects(false);
+      }
+    }
+
+    loadSubjects();
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#080B10] text-zinc-100">
@@ -23,7 +58,11 @@ export function StudyWorkspacePage() {
 
         <main className="flex min-w-0 flex-col rounded-[2rem] border border-white/[0.08] bg-white/[0.035] shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <section className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
-            <UploadHero />
+            {isLoadingSubjects ? (
+              <p className="text-sm text-zinc-400">Cargando materias...</p>
+            ) : (
+              <UploadHero />
+            )}
           </section>
 
           <div className="border-t border-white/[0.08] px-6 py-5">
