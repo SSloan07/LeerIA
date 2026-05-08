@@ -6,3 +6,6 @@ supabase==2.15.3
 pypdf
 python-docx
 python-pptx
+python-multipart
+shutils
+pathlib

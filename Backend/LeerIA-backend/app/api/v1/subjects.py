@@ -58,7 +58,7 @@ def read_all_subject():
         response = (supabase.table("subjects").select("*").execute())
         return {
             "message": "Materias existentes obtenidas satisfactoriamente", 
-            "data": response 
+            "data": response.data
         }
     except Exception as error: 
         raise HTTPException(
@@ -68,7 +68,7 @@ def read_all_subject():
     
 @router.put("/{subject_id}")
 def update_specific_subject(subject_id: UUID, subject: SubjectUpdate):
-    data = subject.model_dump(mode="json", exclude_none=True)
+    data = subject.model_dump(mode="json", exclude_none=True, exclude_unset=True) # Este exclude_unset sirve para que se dejen los valores antiguos si yo no los modifico
 
     if not data:
         raise HTTPException(

@@ -29,7 +29,7 @@ class DocumentCreate(BaseModel):
     subject_id: UUID 
     file_name: str
     storage_path: str
-    status: str 
+    status: Literal["uploaded", "processing"] = "uploaded"
 
 class DocumentChunkCreate(BaseModel): 
     document_id: UUID 
