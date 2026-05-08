@@ -4,6 +4,8 @@ import unicodedata
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
+from fastapi import HTTPException, UploadFile
+from app.database.database_call import supabase
 
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
@@ -44,3 +46,35 @@ def clean_filename(filename: str) -> str:
 def build_storage_path(subject_id: str, filename: str) -> str:
     safe_filename = clean_filename(filename)
     return f"subjects/{subject_id}/{safe_filename}"
+
+def validate_subject_exists(subject_id: str) -> None:
+    subject_response = (
+        supabase
+        .table("subjects")
+        .select("id")
+        .eq("id", subject_id)
+        .execute()
+    )
+
+    if not subject_response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="La materia asociada no existe"
+        )
+
+
+def insert_document_record(document_data: dict) -> dict:
+    response = (
+        supabase
+        .table("documents")
+        .insert(document_data)
+        .execute()
+    )
+
+    if not response.data:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo crear el registro del documento"
+        )
+
+    return response.data[0]
