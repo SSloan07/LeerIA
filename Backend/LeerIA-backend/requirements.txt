@@ -9,3 +9,4 @@ python-pptx
 python-multipart
 shutils
 pathlib
+openai

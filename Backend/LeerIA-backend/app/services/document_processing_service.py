@@ -2,7 +2,7 @@ from app.database.database_call import supabase
 from app.services.storage_service import download_file_from_bucket
 from app.services.text_extraction_service import extract_text_from_bytes
 from app.services.chunking_service import split_text_into_chunks, TextChunk
-
+from app.services.embedding_service import generate_embeddings
 
 def get_document_by_id(document_id: str) -> dict:
     response = (
@@ -50,6 +50,7 @@ def delete_existing_chunks(document_id: str) -> None:
 def build_chunk_records(
     document: dict,
     chunks: list[TextChunk],
+    embeddings: list[list[float]],
 ) -> list[dict]:
     document_id = document["id"]
     subject_id = document["subject_id"]
@@ -58,14 +59,14 @@ def build_chunk_records(
 
     records: list[dict] = []
 
-    for chunk in chunks:
+    for chunk, embedding in zip(chunks, embeddings):
         records.append(
             {
                 "document_id": document_id,
                 "subject_id": subject_id,
                 "chunk_index": chunk.chunk_index,
                 "content": chunk.content,
-                "embedding": None,
+                "embedding": embedding,
                 "metadata": {
                     **chunk.metadata,
                     "file_name": file_name,
@@ -120,15 +121,20 @@ def process_document_pipeline(document_id: str) -> dict:
             overlap=150,
         )
 
+
         if not chunks:
             update_document_status(document_id, "failed")
             raise ValueError("No se generaron chunks para el documento")
 
         delete_existing_chunks(document_id)
 
+        chunk_texts = [chunk.content for chunk in chunks]
+        embeddings = generate_embeddings(chunk_texts)
+
         chunk_records = build_chunk_records(
             document=document,
             chunks=chunks,
+            embeddings=embeddings,
         )
 
         inserted_chunks = insert_document_chunks(chunk_records)

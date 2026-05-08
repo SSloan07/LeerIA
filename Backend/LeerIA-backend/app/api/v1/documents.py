@@ -10,43 +10,15 @@ from app.services.document_service import (
     clean_filename,
     is_allowed_file,
     get_file_extension,
+    validate_subject_exists, 
+    insert_document_record
 )
+from app.services.storage_service import upload_file_to_bucket
+from app.services.document_processing_service import process_document_pipeline
 
 
 router = APIRouter()
 
-
-def validate_subject_exists(subject_id: str):
-    subject_response = (
-        supabase
-        .table("subjects")
-        .select("*")
-        .eq("id", subject_id)
-        .execute()
-    )
-
-    if not subject_response.data:
-        raise HTTPException(
-            status_code=404,
-            detail="La materia asociada no existe"
-        )
-
-
-def insert_document_record(document_data: dict):
-    response = (
-        supabase
-        .table("documents")
-        .insert(document_data)
-        .execute()
-    )
-
-    if not response.data:
-        raise HTTPException(
-            status_code=500,
-            detail="No se pudo crear el registro del documento"
-        )
-
-    return response.data[0]
 
 
 @router.post("/")
@@ -95,9 +67,6 @@ async def upload_document(
                 detail=f"Tipo de archivo no permitido: {get_file_extension(file.filename)}"
             )
 
-        safe_filename = clean_filename(file.filename)
-        storage_path = build_storage_path(subject_id_str, safe_filename)
-
         file_bytes = await file.read()
 
         if not file_bytes:
@@ -106,13 +75,14 @@ async def upload_document(
                 detail="El archivo está vacío"
             )
 
-        supabase.storage.from_(SUPABASE_BUCKET).upload(
-            path=storage_path,
-            file=file_bytes,
-            file_options={
-                "content-type": file.content_type or "application/octet-stream",
-                "upsert": "false"
-            }
+        safe_filename = clean_filename(file.filename)
+        storage_path = build_storage_path(subject_id_str, safe_filename)
+
+        upload_file_to_bucket(
+            storage_path=storage_path,
+            file_bytes=file_bytes,
+            content_type=file.content_type,
+            upsert=False,
         )
 
         document_data = {
@@ -143,3 +113,19 @@ async def upload_document(
 
     finally:
         await file.close()
+
+@router.post("/{document_id}/process")
+def process_document(document_id: UUID):
+    try:
+        result = process_document_pipeline(str(document_id))
+
+        return {
+            "message": "Documento procesado correctamente",
+            "data": result,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error procesando documento: {str(error)}"
+        )

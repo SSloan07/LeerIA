@@ -21,22 +21,24 @@ class MessageCreate(BaseModel):
 
 class GeneratedItemsCreate(BaseModel): 
     subject_id: UUID 
-    document_id: UUID 
+    document_id: UUID | None = None
     type: Literal["summary", "quiz", "flashcards", "video_script"]
     content: dict[str, Any] 
 
 class DocumentCreate(BaseModel): 
     subject_id: UUID 
     file_name: str
+    file_type: str | None = None
     storage_path: str
-    status: Literal["uploaded", "processing"] = "uploaded"
+    status: Literal["uploaded", "processing", "ready", "failed"] = "uploaded"
 
 class DocumentChunkCreate(BaseModel): 
     document_id: UUID 
     subject_id: UUID 
     chunk_index: int
     content: str
-    embedding: list[float] # Si uno se pone a mirar, realmente un embedding es una lista de flotantes. Por ejemplo -> [123.1341,13131.12,12354.123..]
+    embedding: list[float] | None = None # Si uno se pone a mirar, realmente un embedding es una lista de flotantes. Por ejemplo -> [123.1341,13131.12,12354.123..]
+    metadata: dict[str, Any] | None = None 
 
 class ConversationCreate(BaseModel): 
     subject_id: UUID
