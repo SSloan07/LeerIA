@@ -2,6 +2,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
+  Pencil,
   Plus,
   Settings,
   Sparkles,
@@ -13,12 +14,16 @@ type AppSidebarProps = {
   subjects: Subject[];
   selectedSubjectId?: string;
   onSelectSubject: (subjectId: string) => void;
+  onCreateSubject: () => void;
+  onEditSubject: (subjectId: string) => void;
 };
 
 export function AppSidebar({
   subjects,
   selectedSubjectId,
   onSelectSubject,
+  onCreateSubject,
+  onEditSubject,
 }: AppSidebarProps) {
   return (
     <aside className="flex min-h-0 flex-col rounded-[2rem] border border-white/[0.08] bg-white/[0.045] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
@@ -32,7 +37,7 @@ export function AppSidebar({
             <h1 className="text-sm font-semibold tracking-tight text-zinc-50">
               {appConfig.name}
             </h1>
-            <p className="text-xs text-zinc-500">AI Study Workspace</p>
+            <p className="text-xs text-zinc-500">LeerIA</p>
           </div>
         </div>
 
@@ -47,10 +52,11 @@ export function AppSidebar({
 
       <button
         type="button"
+        onClick={onCreateSubject}
         className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-emerald-300 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-[0_14px_34px_rgba(110,231,183,0.22)] transition hover:bg-emerald-200"
       >
         <Plus className="h-4 w-4" />
-        Nueva sesión
+        Nueva materia
       </button>
 
       <section className="mt-8 min-h-0 flex-1">
@@ -74,6 +80,7 @@ export function AppSidebar({
               subject={subject}
               selected={subject.id === selectedSubjectId}
               onClick={() => onSelectSubject(subject.id)}
+              onEdit={() => onEditSubject(subject.id)}
             />
           ))}
         </div>
@@ -118,15 +125,19 @@ type SubjectCardProps = {
   subject: Subject;
   selected: boolean;
   onClick: () => void;
+  onEdit: () => void;
 };
 
-function SubjectCard({ subject, selected, onClick }: SubjectCardProps) {
+function SubjectCard({
+  subject,
+  selected,
+  onClick,
+  onEdit,
+}: SubjectCardProps) {
   const Icon = subject.icon;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={[
         "group w-full rounded-2xl border p-4 text-left transition duration-300",
         selected
@@ -135,40 +146,60 @@ function SubjectCard({ subject, selected, onClick }: SubjectCardProps) {
       ].join(" ")}
     >
       <div className="flex items-center gap-3">
-        <div
-          className={[
-            "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-            subject.iconClassName,
-          ].join(" ")}
+        <button
+          type="button"
+          onClick={onClick}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <Icon className="h-5 w-5" />
+          <div
+            className={[
+              "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+              subject.iconClassName,
+            ].join(" ")}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p
+              title={subject.name}
+              className="truncate text-sm font-semibold text-zinc-100"
+            >
+              {subject.name}
+            </p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              {subject.documents} documentos
+              {selected && (
+                <>
+                  <span className="mx-1.5">•</span>
+                  <span className="text-emerald-300">{subject.status}</span>
+                </>
+              )}
+            </p>
+          </div>
+        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Editar materia"
+            onClick={onEdit}
+            className="grid h-8 w-8 place-items-center rounded-xl text-zinc-500 opacity-0 transition hover:bg-white/[0.08] hover:text-zinc-100 group-hover:opacity-100"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+
+          <ChevronRight
+            className={[
+              "h-5 w-5 transition",
+              selected
+                ? "text-emerald-200"
+                : "text-zinc-600 group-hover:translate-x-0.5 group-hover:text-zinc-300",
+            ].join(" ")}
+          />
         </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-zinc-100">
-            {subject.name}
-          </p>
-
-          <p className="mt-1 text-xs text-zinc-500">
-            {subject.documents} documentos
-            {selected && (
-              <>
-                <span className="mx-1.5">•</span>
-                <span className="text-emerald-300">{subject.status}</span>
-              </>
-            )}
-          </p>
-        </div>
-
-        <ChevronRight
-          className={[
-            "h-5 w-5 transition",
-            selected
-              ? "text-emerald-200"
-              : "text-zinc-600 group-hover:translate-x-0.5 group-hover:text-zinc-300",
-          ].join(" ")}
-        />
       </div>
-    </button>
+    </div>
   );
 }

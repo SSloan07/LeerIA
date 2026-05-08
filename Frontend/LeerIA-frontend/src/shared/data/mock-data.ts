@@ -48,7 +48,7 @@ export type QuickAction = {
 };
 
 export const appConfig = {
-  name: "StudyRAG AI",
+  name: "LeerIA",
   user: {
     name: "Simón Sloan",
     plan: "Plan Pro",
