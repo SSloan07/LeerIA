@@ -6,6 +6,7 @@ import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
 import { RightInspector } from "../../widgets/RightInspector/RightInspector";
 import { UploadHero } from "../../widgets/UploadHero/UploadHero";
 import { SubjectFormPanel } from "../../widgets/SubjectFormPanel/SubjectFormPanel";
+import { askRagQuestion } from "../../shared/api/chat";
 
 import type { Subject } from "../../shared/data/mock-data";
 
@@ -18,6 +19,12 @@ import {
 
 type SidebarSubject = Subject & {
   description?: string | null;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
 };
 
 function mapApiSubjectToSidebarSubject(subject: ApiSubject): SidebarSubject {
@@ -39,6 +46,9 @@ export function StudyWorkspacePage() {
 
   const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isAsking, setIsAsking] = useState(false);
 
   const editingSubject = subjects.find(
     (subject) => subject.id === editingSubjectId
@@ -100,6 +110,50 @@ export function StudyWorkspacePage() {
     }
   }
 
+  async function handleSubmitMessage(message: string) {
+    if (!selectedSubjectId) {
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: message,
+    };
+
+    setMessages((currentMessages) => [...currentMessages, userMessage]);
+    setIsAsking(true);
+
+    try {
+      const result = await askRagQuestion({
+        subjectId: selectedSubjectId,
+        question: message,
+        matchCount: 5,
+      });
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: result.answer,
+      };
+
+      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
+    } catch (error) {
+      console.error("Error preguntando al RAG:", error);
+
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          "No pude generar una respuesta con los documentos de esta materia.",
+      };
+
+      setMessages((currentMessages) => [...currentMessages, errorMessage]);
+    } finally {
+      setIsAsking(false);
+    }
+  }
+
   useEffect(() => {
     async function initialLoad() {
       try {
@@ -128,7 +182,7 @@ export function StudyWorkspacePage() {
         />
       )}
 
-      <div className="relative z-10 grid min-h-screen grid-cols-[300px_1fr_360px] gap-4 p-4">
+      <div className="relative z-10 grid h-screen grid-cols-[300px_1fr_360px] gap-4 p-4">
         <AppSidebar
           subjects={subjects}
           selectedSubjectId={selectedSubjectId}
@@ -137,17 +191,49 @@ export function StudyWorkspacePage() {
           onEditSubject={handleOpenEditSubject}
         />
 
-        <main className="flex min-w-0 flex-col rounded-[2rem] border border-white/[0.08] bg-white/[0.035] shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
-          <section className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.035] shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <section className="flex min-h-0 flex-1 flex-col px-8 py-10">
             {isLoadingSubjects ? (
-              <p className="text-sm text-zinc-400">Cargando materias...</p>
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-sm text-zinc-400">Cargando materias...</p>
+              </div>
+            ) : messages.length > 0 ? (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={[
+                        "max-w-[72%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
+                        message.role === "user"
+                          ? "ml-auto bg-emerald-300 text-zinc-950"
+                          : "mr-auto border border-white/[0.08] bg-white/[0.06] text-zinc-100",
+                      ].join(" ")}
+                    >
+                      {message.content}
+                    </div>
+                  ))}
+
+                  {isAsking && (
+                    <div className="mr-auto max-w-[72%] rounded-3xl border border-white/[0.08] bg-white/[0.06] px-5 py-4 text-sm text-zinc-400">
+                      Pensando con tus documentos...
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
-              <UploadHero />
+              <div className="flex flex-1 items-center justify-center">
+                <UploadHero />
+              </div>
             )}
           </section>
 
           <div className="border-t border-white/[0.08] px-6 py-5">
-            <ChatComposer />
+            <ChatComposer
+              disabled={!selectedSubjectId}
+              isSubmitting={isAsking}
+              onSubmitMessage={handleSubmitMessage}
+            />
           </div>
         </main>
 
