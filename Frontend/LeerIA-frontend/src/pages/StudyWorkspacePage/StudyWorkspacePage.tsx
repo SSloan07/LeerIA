@@ -1,4 +1,4 @@
-import { useEffect, useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen } from "lucide-react";
 
 import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar";
@@ -6,9 +6,15 @@ import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
 import { RightInspector } from "../../widgets/RightInspector/RightInspector";
 import { UploadHero } from "../../widgets/UploadHero/UploadHero";
 import { SubjectFormPanel } from "../../widgets/SubjectFormPanel/SubjectFormPanel";
-import { askRagQuestion } from "../../shared/api/chat";
-import { uploadDocument, processDocument,} from "../../shared/api/documents";
 
+import { askRagQuestion } from "../../shared/api/chat";
+
+import {
+  uploadDocument,
+  processDocument,
+  getDocumentsBySubject,
+  type ApiDocument,
+} from "../../shared/api/documents";
 
 import type { Subject } from "../../shared/data/mock-data";
 
@@ -46,11 +52,15 @@ export function StudyWorkspacePage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>();
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
 
+  const [documents, setDocuments] = useState<ApiDocument[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+
   const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAsking, setIsAsking] = useState(false);
+
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(
     null
@@ -77,6 +87,38 @@ export function StudyWorkspacePage() {
     setEditingSubjectId(null);
   }
 
+  async function loadDocumentsBySubject(subjectId: string) {
+    setIsLoadingDocuments(true);
+
+    try {
+      const subjectDocuments = await getDocumentsBySubject(subjectId);
+      setDocuments(subjectDocuments);
+
+      setSubjects((currentSubjects) =>
+        currentSubjects.map((subject) =>
+          subject.id === subjectId
+            ? {
+                ...subject,
+                documents: subjectDocuments.length,
+              }
+            : subject
+        )
+      );
+    } catch (error) {
+      console.error("Error cargando documentos:", error);
+      setDocuments([]);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  }
+
+  function handleSelectSubject(subjectId: string) {
+    setSelectedSubjectId(subjectId);
+    setMessages([]);
+    setUploadStatusMessage(null);
+    loadDocumentsBySubject(subjectId);
+  }
+
   async function loadSubjects() {
     const apiSubjects = await getSubjects();
     const sidebarSubjects = apiSubjects.map(mapApiSubjectToSidebarSubject);
@@ -84,7 +126,10 @@ export function StudyWorkspacePage() {
     setSubjects(sidebarSubjects);
 
     if (!selectedSubjectId && sidebarSubjects.length > 0) {
-      setSelectedSubjectId(sidebarSubjects[0].id);
+      const firstSubjectId = sidebarSubjects[0].id;
+
+      setSelectedSubjectId(firstSubjectId);
+      await loadDocumentsBySubject(firstSubjectId);
     }
   }
 
@@ -99,6 +144,9 @@ export function StudyWorkspacePage() {
 
         setSubjects((currentSubjects) => [...currentSubjects, sidebarSubject]);
         setSelectedSubjectId(createdSubject.id);
+        setDocuments([]);
+        setMessages([]);
+        setUploadStatusMessage(null);
       }
 
       if (panelMode === "edit" && editingSubjectId) {
@@ -107,7 +155,12 @@ export function StudyWorkspacePage() {
 
         setSubjects((currentSubjects) =>
           currentSubjects.map((subject) =>
-            subject.id === updatedSubject.id ? sidebarSubject : subject
+            subject.id === updatedSubject.id
+              ? {
+                  ...sidebarSubject,
+                  documents: subject.documents,
+                }
+              : subject
           )
         );
       }
@@ -177,13 +230,17 @@ export function StudyWorkspacePage() {
         file,
       });
 
-      setUploadStatusMessage("Documento subido. Procesando texto, chunks y embeddings...");
+      setUploadStatusMessage(
+        "Documento subido. Procesando texto, chunks y embeddings..."
+      );
 
       const processedDocument = await processDocument(uploadedDocument.id);
 
       setUploadStatusMessage(
         `Documento procesado correctamente. Chunks creados: ${processedDocument.chunks_created}`
       );
+
+      await loadDocumentsBySubject(selectedSubjectId);
     } catch (error) {
       console.error("Error subiendo/procesando documento:", error);
 
@@ -211,6 +268,13 @@ export function StudyWorkspacePage() {
     initialLoad();
   }, []);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages, isAsking]);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#080B10] text-zinc-100">
       <BackgroundEffects />
@@ -229,7 +293,7 @@ export function StudyWorkspacePage() {
         <AppSidebar
           subjects={subjects}
           selectedSubjectId={selectedSubjectId}
-          onSelectSubject={setSelectedSubjectId}
+          onSelectSubject={handleSelectSubject}
           onCreateSubject={handleOpenCreateSubject}
           onEditSubject={handleOpenEditSubject}
         />
@@ -258,10 +322,12 @@ export function StudyWorkspacePage() {
                   ))}
 
                   {isAsking && (
-                    <div className="mr-auto max-w-[72%] rounded-3xl border border-white/[0.08] bg-white/[0.06] px-5 py-4 text-sm text-zinc-400">
+                    <div className="mr-auto max-w-[68%] rounded-3xl border border-white/[0.08] bg-white/[0.06] px-5 py-4 text-sm text-zinc-400">
                       Pensando con tus documentos...
                     </div>
                   )}
+
+                  <div ref={messagesEndRef} />
                 </div>
               </div>
             ) : (
@@ -287,7 +353,10 @@ export function StudyWorkspacePage() {
           </div>
         </main>
 
-        <RightInspector />
+        <RightInspector
+          documents={documents}
+          isLoadingDocuments={isLoadingDocuments}
+        />
       </div>
     </div>
   );

@@ -1,11 +1,19 @@
+import type { ReactNode } from "react";
 import { Bell, FileText, Search } from "lucide-react";
 
-import {
-  detectedTopics,
-  recentFiles,
-} from "../../shared/data/mock-data";
+import type { ApiDocument } from "../../shared/api/documents";
 
-export function RightInspector() {
+import { detectedTopics } from "../../shared/data/mock-data";
+
+type RightInspectorProps = {
+  documents: ApiDocument[];
+  isLoadingDocuments?: boolean;
+};
+
+export function RightInspector({
+  documents,
+  isLoadingDocuments = false,
+}: RightInspectorProps) {
   return (
     <aside className="flex min-h-0 flex-col gap-4 rounded-[2rem] border border-white/[0.08] bg-white/[0.045] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
       <header className="flex items-center justify-between">
@@ -36,9 +44,19 @@ export function RightInspector() {
         <SectionTitle title="Fuentes recientes" action="Ver todo" />
 
         <div className="mt-3">
-          {recentFiles.map((file) => (
-            <RecentFileItem key={file.id} file={file} />
-          ))}
+          {isLoadingDocuments ? (
+            <p className="py-4 text-sm text-zinc-500">
+              Cargando documentos...
+            </p>
+          ) : documents.length === 0 ? (
+            <p className="py-4 text-sm leading-6 text-zinc-500">
+              Todavía no hay documentos en esta materia.
+            </p>
+          ) : (
+            documents.map((document) => (
+              <RecentDocumentItem key={document.id} document={document} />
+            ))
+          )}
         </div>
       </section>
 
@@ -78,7 +96,7 @@ export function RightInspector() {
 
 type IconButtonProps = {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function IconButton({ label, children }: IconButtonProps) {
@@ -113,42 +131,93 @@ function SectionTitle({ title, action }: SectionTitleProps) {
   );
 }
 
-type RecentFileItemProps = {
-  file: {
-    name: string;
-    type: string;
-    size: string;
-    date: string;
-    badge: string;
-    badgeClassName: string;
-  };
+type RecentDocumentItemProps = {
+  document: ApiDocument;
 };
 
-function RecentFileItem({ file }: RecentFileItemProps) {
+function RecentDocumentItem({ document }: RecentDocumentItemProps) {
+  const extension = getDocumentExtension(document.file_name);
+  const badgeClassName = getBadgeClassName(extension);
+  const readableDate = formatDocumentDate(document.created_at);
+
   return (
     <article className="flex items-center gap-3 border-b border-white/[0.06] py-3 last:border-0 last:pb-0">
       <div
         className={[
           "grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-[10px] font-bold",
-          file.badgeClassName,
+          badgeClassName,
         ].join(" ")}
       >
-        {file.badge}
+        {extension.toUpperCase()}
       </div>
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-zinc-100">
-          {file.name}
+          {document.file_name}
         </p>
 
         <p className="mt-1 text-xs text-zinc-500">
-          {file.type}
+          {extension.toUpperCase()}
           <span className="mx-1">•</span>
-          {file.size}
+          {translateStatus(document.status)}
           <span className="mx-1">•</span>
-          {file.date}
+          {readableDate}
         </p>
       </div>
     </article>
   );
+}
+
+function getDocumentExtension(fileName: string): string {
+  const extension = fileName.split(".").pop();
+
+  return extension ? extension.toLowerCase() : "file";
+}
+
+function translateStatus(status: ApiDocument["status"]): string {
+  const statusMap: Record<ApiDocument["status"], string> = {
+    uploaded: "Subido",
+    processing: "Procesando",
+    ready: "Listo",
+    failed: "Error",
+  };
+
+  return statusMap[status] ?? status;
+}
+
+function formatDocumentDate(createdAt: string): string {
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha no disponible";
+  }
+
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+function getBadgeClassName(extension: string): string {
+  if (extension === "pdf") {
+    return "border-red-400/20 bg-red-400/15 text-red-300";
+  }
+
+  if (extension === "docx" || extension === "doc") {
+    return "border-blue-400/20 bg-blue-400/15 text-blue-300";
+  }
+
+  if (extension === "pptx" || extension === "ppt") {
+    return "border-orange-400/20 bg-orange-400/15 text-orange-300";
+  }
+
+  if (extension === "xlsx" || extension === "xls") {
+    return "border-emerald-400/20 bg-emerald-400/15 text-emerald-300";
+  }
+
+  if (extension === "txt") {
+    return "border-zinc-400/20 bg-zinc-400/15 text-zinc-300";
+  }
+
+  return "border-violet-400/20 bg-violet-400/15 text-violet-300";
 }

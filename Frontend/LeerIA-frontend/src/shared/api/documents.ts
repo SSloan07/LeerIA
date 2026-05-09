@@ -66,3 +66,22 @@ export async function processDocument(
 
   return result.data;
 }
+
+type DocumentsBySubjectResponse = {
+  message: string;
+  data: ApiDocument[];
+};
+
+export async function getDocumentsBySubject(
+  subjectId: string
+): Promise<ApiDocument[]> {
+  const response = await fetch(`${API_URL}/subjects/${subjectId}/documents`);
+
+  if (!response.ok) {
+    throw new Error("Error al cargar documentos de la materia");
+  }
+
+  const result: DocumentsBySubjectResponse = await response.json();
+
+  return result.data;
+}
