@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef,useState } from "react";
 import { BookOpen } from "lucide-react";
 
 import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar";
@@ -7,6 +7,8 @@ import { RightInspector } from "../../widgets/RightInspector/RightInspector";
 import { UploadHero } from "../../widgets/UploadHero/UploadHero";
 import { SubjectFormPanel } from "../../widgets/SubjectFormPanel/SubjectFormPanel";
 import { askRagQuestion } from "../../shared/api/chat";
+import { uploadDocument, processDocument,} from "../../shared/api/documents";
+
 
 import type { Subject } from "../../shared/data/mock-data";
 
@@ -49,6 +51,12 @@ export function StudyWorkspacePage() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAsking, setIsAsking] = useState(false);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(
+    null
+  );
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const editingSubject = subjects.find(
     (subject) => subject.id === editingSubjectId
@@ -154,6 +162,41 @@ export function StudyWorkspacePage() {
     }
   }
 
+  async function handleUploadFile(file: File) {
+    if (!selectedSubjectId) {
+      setUploadStatusMessage("Selecciona una materia antes de subir un documento.");
+      return;
+    }
+
+    setIsUploadingDocument(true);
+    setUploadStatusMessage("Subiendo documento...");
+
+    try {
+      const uploadedDocument = await uploadDocument({
+        subjectId: selectedSubjectId,
+        file,
+      });
+
+      setUploadStatusMessage("Documento subido. Procesando texto, chunks y embeddings...");
+
+      const processedDocument = await processDocument(uploadedDocument.id);
+
+      setUploadStatusMessage(
+        `Documento procesado correctamente. Chunks creados: ${processedDocument.chunks_created}`
+      );
+    } catch (error) {
+      console.error("Error subiendo/procesando documento:", error);
+
+      setUploadStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir o procesar el documento."
+      );
+    } finally {
+      setIsUploadingDocument(false);
+    }
+  }
+
   useEffect(() => {
     async function initialLoad() {
       try {
@@ -199,12 +242,12 @@ export function StudyWorkspacePage() {
               </div>
             ) : messages.length > 0 ? (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
+                <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-4">
                   {messages.map((message) => (
                     <div
                       key={message.id}
                       className={[
-                        "max-w-[72%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
+                        "max-w-[68%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
                         message.role === "user"
                           ? "ml-auto bg-emerald-300 text-zinc-950"
                           : "mr-auto border border-white/[0.08] bg-white/[0.06] text-zinc-100",
@@ -223,7 +266,12 @@ export function StudyWorkspacePage() {
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center">
-                <UploadHero />
+                <UploadHero
+                  disabled={!selectedSubjectId}
+                  isUploading={isUploadingDocument}
+                  statusMessage={uploadStatusMessage}
+                  onUploadFile={handleUploadFile}
+                />
               </div>
             )}
           </section>
@@ -232,7 +280,9 @@ export function StudyWorkspacePage() {
             <ChatComposer
               disabled={!selectedSubjectId}
               isSubmitting={isAsking}
+              isUploading={isUploadingDocument}
               onSubmitMessage={handleSubmitMessage}
+              onUploadFile={handleUploadFile}
             />
           </div>
         </main>

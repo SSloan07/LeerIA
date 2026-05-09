@@ -1,11 +1,32 @@
 import { Lock, UploadCloud } from "lucide-react";
 
-import {
-  quickActions,
-  studyMetrics,
-} from "../../shared/data/mock-data";
+import { quickActions, studyMetrics } from "../../shared/data/mock-data";
 
-export function UploadHero() {
+type UploadHeroProps = {
+  disabled?: boolean;
+  isUploading?: boolean;
+  statusMessage?: string | null;
+  onUploadFile: (file: File) => void | Promise<void>;
+};
+
+export function UploadHero({
+  disabled = false,
+  isUploading = false,
+  statusMessage = null,
+  onUploadFile,
+}: UploadHeroProps) {
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    await onUploadFile(file);
+
+    event.target.value = "";
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
       <UploadIllustration />
@@ -24,19 +45,37 @@ export function UploadHero() {
       </p>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-300 px-5 py-3 text-sm font-semibold text-zinc-950 shadow-[0_18px_45px_rgba(110,231,183,0.24)] transition hover:bg-emerald-200"
+        <label
+          className={[
+            "inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-emerald-300 px-5 py-3 text-sm font-semibold text-zinc-950 shadow-[0_18px_45px_rgba(110,231,183,0.24)] transition hover:bg-emerald-200",
+            disabled || isUploading
+              ? "pointer-events-none cursor-not-allowed opacity-50"
+              : "",
+          ].join(" ")}
         >
           <UploadCloud className="h-4 w-4" />
-          Subir archivo
-        </button>
+          {isUploading ? "Procesando..." : "Subir archivo"}
+
+          <input
+            type="file"
+            className="hidden"
+            accept=".pdf,.docx,.pptx,.txt"
+            disabled={disabled || isUploading}
+            onChange={handleFileChange}
+          />
+        </label>
 
         <div className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-zinc-400">
           <Lock className="h-4 w-4 text-emerald-300" />
           Tus archivos son privados y seguros
         </div>
       </div>
+
+      {statusMessage && (
+        <p className="mt-5 max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.04] px-5 py-3 text-sm text-zinc-400">
+          {statusMessage}
+        </p>
+      )}
 
       <div className="mt-7 flex flex-wrap justify-center gap-2">
         {quickActions.map((action) => {
@@ -46,7 +85,8 @@ export function UploadHero() {
             <button
               key={action.id}
               type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm text-zinc-300 transition hover:border-emerald-300/25 hover:bg-emerald-300/10 hover:text-emerald-100"
+              disabled={disabled || isUploading}
+              className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-sm text-zinc-300 transition hover:border-emerald-300/25 hover:bg-emerald-300/10 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Icon className="h-4 w-4" />
               {action.label}
