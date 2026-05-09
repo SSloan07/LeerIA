@@ -2,6 +2,7 @@ from app.models.entities import SubjectCreate, SubjectUpdate
 from fastapi import APIRouter, HTTPException 
 from app.database.database_call import supabase
 from uuid import UUID
+from app.services.document_service import get_documents_by_subject_id
 
 
 router = APIRouter()
@@ -103,4 +104,20 @@ def update_specific_subject(subject_id: UUID, subject: SubjectUpdate):
         raise HTTPException(
             status_code=500,
             detail=f"Error al actualizar materia: {str(error)}"
+        )
+
+@router.get("/{subject_id}/documents")
+def read_documents_by_subject(subject_id: UUID):
+    try:
+        documents = get_documents_by_subject_id(str(subject_id))
+
+        return {
+            "message": "Documentos de la materia obtenidos correctamente",
+            "data": documents,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener documentos de la materia: {str(error)}"
         )

@@ -78,3 +78,15 @@ def insert_document_record(document_data: dict) -> dict:
         )
 
     return response.data[0]
+
+def get_documents_by_subject_id(subject_id: str) -> list[dict]:
+    response = (
+        supabase
+        .table("documents")
+        .select("id, subject_id, file_name, file_type, storage_path, status, created_at")
+        .eq("subject_id", subject_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return response.data or []
