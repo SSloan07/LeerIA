@@ -41,9 +41,9 @@ export function RightInspector({
       </header>
 
       <section className="rounded-[1.6rem] border border-white/[0.08] bg-white/[0.035] p-4">
-        <SectionTitle title="Fuentes recientes" action="Ver todo" />
+        <SectionTitle title="Fuentes recientes" action="" />
 
-        <div className="mt-3">
+        <div className="documents-scroll mt-3 max-h-[210px] overflow-y-auto pr-2">
           {isLoadingDocuments ? (
             <p className="py-4 text-sm text-zinc-500">
               Cargando documentos...
