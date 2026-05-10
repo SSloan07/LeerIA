@@ -25,23 +25,32 @@ def build_rag_system_prompt() -> str:
     )
 
 
-def build_rag_user_prompt(question: str, context: str) -> str:
+def build_rag_user_prompt( question: str, context: str,chat_history: str | None = None, ) -> str:
+    history_block = ""
+
+    if chat_history:
+        history_block = f"""
+        Historial conversacional:
+        {chat_history}
+
+        Nota: El historial solo sirve para entender referencias del usuario.
+        No lo uses como fuente de verdad.
+        """.strip()
+
     return f"""
-    Contexto recuperado:
-    {context}
+        Contexto recuperado:
+        {context}
 
-    Pregunta del usuario:
-    {question}
+        {history_block}
 
-    Respuesta:
-    """.strip()
+        Pregunta del usuario:
+        {question}
+
+        Respuesta:
+        """.strip()
 
 
-def generate_rag_answer(
-    subject_id: str,
-    question: str,
-    match_count: int = 5,
-) -> dict:
+def generate_rag_answer( subject_id: str, question: str, match_count: int = 5, chat_history: str | None = None, retrieval_question: str | None = None, ) -> dict:
     if not subject_id:
         raise ValueError("subject_id no puede estar vacío")
 
@@ -50,7 +59,7 @@ def generate_rag_answer(
 
     chunks = retrieve_relevant_chunks(
         subject_id=subject_id,
-        question=question,
+        question=retrieval_question or question,
         match_count=match_count,
     )
 
@@ -79,6 +88,7 @@ def generate_rag_answer(
                 "content": build_rag_user_prompt(
                     question=question,
                     context=context,
+                    chat_history=chat_history,
                 ),
             },
         ],

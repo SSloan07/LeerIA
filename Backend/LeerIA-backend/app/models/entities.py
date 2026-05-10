@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID # Esto es para las claves foraneas 
-from typing import Any
-from typing import Literal
+from typing import Any, Optional, Literal, Dict 
+
 
 
 
@@ -15,9 +15,9 @@ class SubjectUpdate(BaseModel):
     description: str | None = None
 
 class MessageCreate(BaseModel): 
-    role: Literal["user","model"]
+    role: Literal["user", "assistant", "system"]
     content: str 
-    conversation_id : UUID 
+    conversation_id : Optional[Dict[str, Any]] = {}
 
 class GeneratedItemsCreate(BaseModel): 
     subject_id: UUID 
@@ -42,6 +42,17 @@ class DocumentChunkCreate(BaseModel):
 
 class ConversationCreate(BaseModel): 
     subject_id: UUID
-    title: str = "Nueva Conversación"
+    title: Optional[str] = "Nueva Conversación"
+
+
+class ConversationUpdate(BaseModel):
+    title: Optional[str] = None
+
+
+class UserMessageCreate(BaseModel):
+    content: str
+
+
+
 
 
