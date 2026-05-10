@@ -14,6 +14,9 @@ import { useConversationsController } from "./hooks/useConversationsController";
 import { useMessagesController } from "./hooks/useMessagesController";
 import { useSubjectPanel } from "./hooks/useSubjectPanelController";
 import { useAutoScroll } from "./hooks/useAutoScroll";
+import { useStudyItemsController } from "./hooks/useStudyItemsController";
+
+import type { GeneratedItemType } from "../../shared/api/generatedItems";
 
 export function StudyWorkspacePage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -25,8 +28,8 @@ export function StudyWorkspacePage() {
   });
 
   const conversationsController = useConversationsController();
-
   const messagesController = useMessagesController();
+  const studyItemsController = useStudyItemsController();
 
   const subjectPanel = useSubjectPanel(subjectsController.subjects);
 
@@ -42,6 +45,7 @@ export function StudyWorkspacePage() {
     conversationsController.clearSelectedConversation();
     messagesController.clearMessages();
     documentsController.clearUploadStatus();
+    studyItemsController.clearStudyItem();
 
     conversationsController.setLoadingConversationsSubjectId(subjectId);
     messagesController.setIsLoadingMessages(true);
@@ -79,6 +83,7 @@ export function StudyWorkspacePage() {
   async function handleSelectConversation(conversationId: string) {
     conversationsController.setSelectedConversationId(conversationId);
     documentsController.clearUploadStatus();
+    studyItemsController.showChat();
 
     await messagesController.loadMessagesByConversation(conversationId);
   }
@@ -89,6 +94,7 @@ export function StudyWorkspacePage() {
     conversationsController.setLoadingConversationsSubjectId(subjectId);
     messagesController.setIsLoadingMessages(true);
     documentsController.clearUploadStatus();
+    studyItemsController.showChat();
 
     try {
       const subject = subjectsController.subjects.find(
@@ -135,6 +141,7 @@ export function StudyWorkspacePage() {
         documentsController.clearDocuments();
         messagesController.clearMessages();
         documentsController.clearUploadStatus();
+        studyItemsController.clearStudyItem();
       }
 
       if (
@@ -157,6 +164,8 @@ export function StudyWorkspacePage() {
     if (!conversationsController.selectedConversationId) {
       return;
     }
+
+    studyItemsController.showChat();
 
     try {
       await messagesController.sendMessageToConversation(
@@ -189,6 +198,21 @@ export function StudyWorkspacePage() {
       );
     } catch {
       // El error ya se maneja dentro de useDocumentsController.
+    }
+  }
+
+  async function handleGenerateStudyItem(type: GeneratedItemType) {
+    if (!subjectsController.selectedSubjectId) {
+      return;
+    }
+
+    try {
+      await studyItemsController.generateStudyItemForSubject(
+        subjectsController.selectedSubjectId,
+        type
+      );
+    } catch {
+      // El error ya queda guardado en studyItemsController.studyItemError.
     }
   }
 
@@ -259,6 +283,13 @@ export function StudyWorkspacePage() {
               uploadStatusMessage={documentsController.uploadStatusMessage}
               messagesEndRef={messagesEndRef}
               onUploadFile={handleUploadFile}
+              activeStudyType={studyItemsController.activeStudyType}
+              activeStudyItem={studyItemsController.activeStudyItem}
+              isGeneratingStudyItem={
+                studyItemsController.isGeneratingStudyItem
+              }
+              studyItemError={studyItemsController.studyItemError}
+              onBackToChat={studyItemsController.showChat}
             />
           </section>
 
@@ -280,6 +311,12 @@ export function StudyWorkspacePage() {
         <RightInspector
           documents={documentsController.documents}
           isLoadingDocuments={documentsController.isLoadingDocuments}
+          selectedSubjectId={subjectsController.selectedSubjectId}
+          activeStudyType={studyItemsController.activeStudyType}
+          isGeneratingStudyItem={
+            studyItemsController.isGeneratingStudyItem
+          }
+          onGenerateStudyItem={handleGenerateStudyItem}
         />
       </div>
     </div>
