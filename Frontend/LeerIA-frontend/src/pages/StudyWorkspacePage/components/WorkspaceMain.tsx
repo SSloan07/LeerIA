@@ -11,6 +11,7 @@ import type {
 import { ChatMessages } from "./ChatMessages";
 import { EmptyConversationState } from "./EmptyConversationState";
 import { FlashcardsViewer } from "./FlashcardsViewer";
+import { QuizViewer } from "./QuizViewer";
 
 type ActiveStudyType = GeneratedItemType | "chat";
 
@@ -198,6 +199,14 @@ function StudyItemView({
   if (activeStudyType === "flashcards") {
     return (
       <FlashcardsViewer
+        item={activeStudyItem}
+        onBackToChat={onBackToChat}
+      />
+    );
+  }
+  if (activeStudyType === "quiz") {
+    return (
+      <QuizViewer
         item={activeStudyItem}
         onBackToChat={onBackToChat}
       />
