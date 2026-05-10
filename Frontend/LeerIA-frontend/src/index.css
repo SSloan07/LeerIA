@@ -54,3 +54,35 @@ body {
 .documents-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+/* Scrollbar oscuro para vistas internas */
+.summary-scroll,
+.chat-scroll,
+.documents-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(113, 113, 122, 0.55) transparent;
+}
+
+.summary-scroll::-webkit-scrollbar,
+.chat-scroll::-webkit-scrollbar,
+.documents-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.summary-scroll::-webkit-scrollbar-track,
+.chat-scroll::-webkit-scrollbar-track,
+.documents-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.summary-scroll::-webkit-scrollbar-thumb,
+.chat-scroll::-webkit-scrollbar-thumb,
+.documents-scroll::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.45);
+  border-radius: 999px;
+}
+
+.summary-scroll::-webkit-scrollbar-thumb:hover,
+.chat-scroll::-webkit-scrollbar-thumb:hover,
+.documents-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.65);
+}
