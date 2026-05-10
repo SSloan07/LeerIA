@@ -19,11 +19,7 @@ class MessageCreate(BaseModel):
     content: str 
     conversation_id : Optional[Dict[str, Any]] = {}
 
-class GeneratedItemsCreate(BaseModel): 
-    subject_id: UUID 
-    document_id: UUID | None = None
-    type: Literal["summary", "quiz", "flashcards", "video_script"]
-    content: dict[str, Any] 
+
 
 class DocumentCreate(BaseModel): 
     subject_id: UUID 
@@ -53,8 +49,6 @@ class UserMessageCreate(BaseModel):
     content: str
 
 
-
-
 GeneratedItemType = Literal[
     "summary",
     "quiz",
@@ -62,10 +56,9 @@ GeneratedItemType = Literal[
     "video_script",
 ]
 
-
 class GeneratedItemGenerateRequest(BaseModel):
     subject_id: UUID
-    type: Literal["summary","quiz","flashcards","video_script",]
+    type: GeneratedItemType
     document_id: UUID | None = None
     force: bool = False
     match_count: int = 12
@@ -75,7 +68,7 @@ class GeneratedItemResponse(BaseModel):
     id: UUID
     subject_id: UUID
     document_id: UUID | None = None
-    type: Literal["summary","quiz","flashcards","video_script",]
+    type: GeneratedItemType
     content: dict[str, Any]
     metadata: dict[str, Any] | None = None
 
