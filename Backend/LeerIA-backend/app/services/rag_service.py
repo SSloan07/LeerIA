@@ -21,7 +21,11 @@ def build_rag_system_prompt() -> str:
         "2. Si el contexto no contiene la respuesta, dilo claramente.\n"
         "3. No inventes información.\n"
         "4. Responde en español.\n"
-        "5. Sé claro, breve y útil para estudiar."
+        "5. Sé claro, breve y útil para estudiar.\n"
+        "6. Formatea la respuesta en Markdown limpio.\n"
+        "7. Usa títulos cortos, listas y negritas cuando ayuden a estudiar.\n"
+        "8. Evita entregar bloques largos de texto sin saltos de línea.\n"
+        "9. Si explicas un tema, usa estructura: resumen, ideas clave y explicación."
     )
 
 
