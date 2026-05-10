@@ -5,11 +5,9 @@ from app.services.retrieval_service import (
     retrieve_relevant_chunks,
     build_context_from_chunks,
 )
+from app.core.openai_client import client, CHAT_MODEL
 
 
-CHAT_MODEL = "gpt-4.1-mini"
-
-client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def build_rag_system_prompt() -> str:

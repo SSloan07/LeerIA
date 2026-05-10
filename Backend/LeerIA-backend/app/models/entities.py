@@ -55,4 +55,31 @@ class UserMessageCreate(BaseModel):
 
 
 
+GeneratedItemType = Literal[
+    "summary",
+    "quiz",
+    "flashcards",
+    "video_script",
+]
+
+
+class GeneratedItemGenerateRequest(BaseModel):
+    subject_id: UUID
+    type: Literal["summary","quiz","flashcards","video_script",]
+    document_id: UUID | None = None
+    force: bool = False
+    match_count: int = 12
+
+
+class GeneratedItemResponse(BaseModel):
+    id: UUID
+    subject_id: UUID
+    document_id: UUID | None = None
+    type: Literal["summary","quiz","flashcards","video_script",]
+    content: dict[str, Any]
+    metadata: dict[str, Any] | None = None
+
+
+
+
 
