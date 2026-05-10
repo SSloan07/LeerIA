@@ -1,135 +1,120 @@
-import { useEffect, useRef, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { AppSidebar } from "../../widgets/AppSidebar/AppSidebar";
 import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
 import { RightInspector } from "../../widgets/RightInspector/RightInspector";
-import { UploadHero } from "../../widgets/UploadHero/UploadHero";
 import { SubjectFormPanel } from "../../widgets/SubjectFormPanel/SubjectFormPanel";
 
-import { askRagQuestion } from "../../shared/api/chat";
+import { BackgroundEffects } from "./components/BackgroundEffects";
+import { WorkspaceMain } from "./components/WorkspaceMain";
 
-import {
-  uploadDocument,
-  processDocument,
-  getDocumentsBySubject,
-  type ApiDocument,
-} from "../../shared/api/documents";
-
-import type { Subject } from "../../shared/data/mock-data";
-
-import {
-  createSubject,
-  getSubjects,
-  updateSubject,
-  type ApiSubject,
-} from "../../shared/api/subjects";
-
-type SidebarSubject = Subject & {
-  description?: string | null;
-};
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
-
-function mapApiSubjectToSidebarSubject(subject: ApiSubject): SidebarSubject {
-  return {
-    id: subject.id,
-    name: subject.name,
-    description: subject.description,
-    documents: 0,
-    status: "Activa",
-    icon: BookOpen,
-    iconClassName: "bg-emerald-400/15 text-emerald-300",
-  };
-}
+import { useSubjectsController } from "./hooks/useSubjectsController";
+import { useDocumentsController } from "./hooks/useDocumentsController";
+import { useConversationsController } from "./hooks/useConversationsController";
+import { useMessagesController } from "./hooks/useMessagesController";
+import { useSubjectPanel } from "./hooks/useSubjectPanelController";
+import { useAutoScroll } from "./hooks/useAutoScroll";
 
 export function StudyWorkspacePage() {
-  const [subjects, setSubjects] = useState<SidebarSubject[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>();
-  const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
-
-  const [documents, setDocuments] = useState<ApiDocument[]>([]);
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
-
-  const [panelMode, setPanelMode] = useState<"create" | "edit" | null>(null);
-  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isAsking, setIsAsking] = useState(false);
-
-  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
-  const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(
-    null
-  );
-
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const editingSubject = subjects.find(
-    (subject) => subject.id === editingSubjectId
-  );
+  const subjectsController = useSubjectsController();
 
-  function handleOpenCreateSubject() {
-    setEditingSubjectId(null);
-    setPanelMode("create");
-  }
+  const documentsController = useDocumentsController({
+    onDocumentCountChange: subjectsController.updateSubjectDocumentCount,
+  });
 
-  function handleOpenEditSubject(subjectId: string) {
-    setEditingSubjectId(subjectId);
-    setPanelMode("edit");
-  }
+  const conversationsController = useConversationsController();
 
-  function handleCloseSubjectPanel() {
-    setPanelMode(null);
-    setEditingSubjectId(null);
-  }
+  const messagesController = useMessagesController();
 
-  async function loadDocumentsBySubject(subjectId: string) {
-    setIsLoadingDocuments(true);
+  const subjectPanel = useSubjectPanel(subjectsController.subjects);
+
+  useAutoScroll(messagesEndRef, [
+    messagesController.messages,
+    messagesController.isAsking,
+    messagesController.isLoadingMessages,
+  ]);
+
+  async function handleSelectSubject(subjectId: string) {
+    subjectsController.setSelectedSubjectId(subjectId);
+
+    conversationsController.clearSelectedConversation();
+    messagesController.clearMessages();
+    documentsController.clearUploadStatus();
+
+    conversationsController.setLoadingConversationsSubjectId(subjectId);
+    messagesController.setIsLoadingMessages(true);
 
     try {
-      const subjectDocuments = await getDocumentsBySubject(subjectId);
-      setDocuments(subjectDocuments);
+      const [subjectConversations] = await Promise.all([
+        conversationsController.loadConversationsBySubject(subjectId),
+        documentsController.loadDocumentsBySubject(subjectId),
+      ]);
 
-      setSubjects((currentSubjects) =>
-        currentSubjects.map((subject) =>
-          subject.id === subjectId
-            ? {
-                ...subject,
-                documents: subjectDocuments.length,
-              }
-            : subject
-        )
+      const firstConversation = subjectConversations[0];
+
+      if (!firstConversation) {
+        conversationsController.clearSelectedConversation();
+        messagesController.clearMessages();
+        return;
+      }
+
+      conversationsController.setSelectedConversationId(firstConversation.id);
+
+      await messagesController.loadMessagesByConversation(
+        firstConversation.id
       );
     } catch (error) {
-      console.error("Error cargando documentos:", error);
-      setDocuments([]);
+      console.error("Error seleccionando materia:", error);
+
+      conversationsController.clearSelectedConversation();
+      messagesController.clearMessages();
     } finally {
-      setIsLoadingDocuments(false);
+      conversationsController.setLoadingConversationsSubjectId(null);
+      messagesController.setIsLoadingMessages(false);
     }
   }
 
-  function handleSelectSubject(subjectId: string) {
-    setSelectedSubjectId(subjectId);
-    setMessages([]);
-    setUploadStatusMessage(null);
-    loadDocumentsBySubject(subjectId);
+  async function handleSelectConversation(conversationId: string) {
+    conversationsController.setSelectedConversationId(conversationId);
+    documentsController.clearUploadStatus();
+
+    await messagesController.loadMessagesByConversation(conversationId);
   }
 
-  async function loadSubjects() {
-    const apiSubjects = await getSubjects();
-    const sidebarSubjects = apiSubjects.map(mapApiSubjectToSidebarSubject);
+  async function handleCreateConversation(subjectId: string) {
+    subjectsController.setSelectedSubjectId(subjectId);
 
-    setSubjects(sidebarSubjects);
+    conversationsController.setLoadingConversationsSubjectId(subjectId);
+    messagesController.setIsLoadingMessages(true);
+    documentsController.clearUploadStatus();
 
-    if (!selectedSubjectId && sidebarSubjects.length > 0) {
-      const firstSubjectId = sidebarSubjects[0].id;
+    try {
+      const subject = subjectsController.subjects.find(
+        (item) => item.id === subjectId
+      );
 
-      setSelectedSubjectId(firstSubjectId);
-      await loadDocumentsBySubject(firstSubjectId);
+      const createdConversation =
+        await conversationsController.createConversationForSubject(
+          subjectId,
+          subject ? `Chat de ${subject.name}` : "Nueva conversación"
+        );
+
+      conversationsController.setSelectedConversationId(
+        createdConversation.id
+      );
+
+      messagesController.clearMessages();
+
+      if (subjectsController.selectedSubjectId !== subjectId) {
+        await documentsController.loadDocumentsBySubject(subjectId);
+      }
+    } catch (error) {
+      console.error("Error creando conversación:", error);
+    } finally {
+      conversationsController.setLoadingConversationsSubjectId(null);
+      messagesController.setIsLoadingMessages(false);
     }
   }
 
@@ -138,215 +123,154 @@ export function StudyWorkspacePage() {
     description?: string | null;
   }) {
     try {
-      if (panelMode === "create") {
-        const createdSubject = await createSubject(data);
-        const sidebarSubject = mapApiSubjectToSidebarSubject(createdSubject);
+      if (subjectPanel.panelMode === "create") {
+        const createdSubject = await subjectsController.createNewSubject(data);
 
-        setSubjects((currentSubjects) => [...currentSubjects, sidebarSubject]);
-        setSelectedSubjectId(createdSubject.id);
-        setDocuments([]);
-        setMessages([]);
-        setUploadStatusMessage(null);
+        conversationsController.initializeSubjectConversations(
+          createdSubject.id
+        );
+
+        subjectsController.setSelectedSubjectId(createdSubject.id);
+        conversationsController.clearSelectedConversation();
+        documentsController.clearDocuments();
+        messagesController.clearMessages();
+        documentsController.clearUploadStatus();
       }
 
-      if (panelMode === "edit" && editingSubjectId) {
-        const updatedSubject = await updateSubject(editingSubjectId, data);
-        const sidebarSubject = mapApiSubjectToSidebarSubject(updatedSubject);
-
-        setSubjects((currentSubjects) =>
-          currentSubjects.map((subject) =>
-            subject.id === updatedSubject.id
-              ? {
-                  ...sidebarSubject,
-                  documents: subject.documents,
-                }
-              : subject
-          )
+      if (
+        subjectPanel.panelMode === "edit" &&
+        subjectPanel.editingSubjectId
+      ) {
+        await subjectsController.updateExistingSubject(
+          subjectPanel.editingSubjectId,
+          data
         );
       }
 
-      handleCloseSubjectPanel();
+      subjectPanel.handleCloseSubjectPanel();
     } catch (error) {
       console.error("Error guardando materia:", error);
     }
   }
 
   async function handleSubmitMessage(message: string) {
-    if (!selectedSubjectId) {
+    if (!conversationsController.selectedConversationId) {
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message,
-    };
-
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
-    setIsAsking(true);
-
     try {
-      const result = await askRagQuestion({
-        subjectId: selectedSubjectId,
-        question: message,
-        matchCount: 5,
-      });
+      await messagesController.sendMessageToConversation(
+        conversationsController.selectedConversationId,
+        message
+      );
 
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: result.answer,
-      };
-
-      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
-    } catch (error) {
-      console.error("Error preguntando al RAG:", error);
-
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content:
-          "No pude generar una respuesta con los documentos de esta materia.",
-      };
-
-      setMessages((currentMessages) => [...currentMessages, errorMessage]);
-    } finally {
-      setIsAsking(false);
+      if (subjectsController.selectedSubjectId) {
+        await conversationsController.loadConversationsBySubject(
+          subjectsController.selectedSubjectId
+        );
+      }
+    } catch {
+      // El error ya se maneja dentro de useMessagesController.
     }
   }
 
   async function handleUploadFile(file: File) {
-    if (!selectedSubjectId) {
-      setUploadStatusMessage("Selecciona una materia antes de subir un documento.");
+    if (!subjectsController.selectedSubjectId) {
+      documentsController.setUploadStatusMessage(
+        "Selecciona una materia antes de subir un documento."
+      );
       return;
     }
 
-    setIsUploadingDocument(true);
-    setUploadStatusMessage("Subiendo documento...");
-
     try {
-      const uploadedDocument = await uploadDocument({
-        subjectId: selectedSubjectId,
-        file,
-      });
-
-      setUploadStatusMessage(
-        "Documento subido. Procesando texto, chunks y embeddings..."
+      await documentsController.uploadAndProcessDocument(
+        subjectsController.selectedSubjectId,
+        file
       );
-
-      const processedDocument = await processDocument(uploadedDocument.id);
-
-      setUploadStatusMessage(
-        `Documento procesado correctamente. Chunks creados: ${processedDocument.chunks_created}`
-      );
-
-      await loadDocumentsBySubject(selectedSubjectId);
-    } catch (error) {
-      console.error("Error subiendo/procesando documento:", error);
-
-      setUploadStatusMessage(
-        error instanceof Error
-          ? error.message
-          : "No se pudo subir o procesar el documento."
-      );
-    } finally {
-      setIsUploadingDocument(false);
+    } catch {
+      // El error ya se maneja dentro de useDocumentsController.
     }
   }
 
   useEffect(() => {
     async function initialLoad() {
       try {
-        await loadSubjects();
+        const loadedSubjects = await subjectsController.loadSubjects();
+
+        if (loadedSubjects.length > 0) {
+          await handleSelectSubject(loadedSubjects[0].id);
+        }
       } catch (error) {
         console.error("Error cargando materias:", error);
       } finally {
-        setIsLoadingSubjects(false);
+        subjectsController.setIsLoadingSubjects(false);
       }
     }
 
     initialLoad();
   }, []);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [messages, isAsking]);
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#080B10] text-zinc-100">
       <BackgroundEffects />
 
-      {panelMode && (
+      {subjectPanel.panelMode && (
         <SubjectFormPanel
-          mode={panelMode}
-          initialName={editingSubject?.name}
-          initialDescription={editingSubject?.description}
-          onClose={handleCloseSubjectPanel}
+          mode={subjectPanel.panelMode}
+          initialName={subjectPanel.editingSubject?.name}
+          initialDescription={subjectPanel.editingSubject?.description}
+          onClose={subjectPanel.handleCloseSubjectPanel}
           onSubmit={handleSubmitSubject}
         />
       )}
 
       <div className="relative z-10 grid h-screen grid-cols-[300px_1fr_360px] gap-4 p-4">
         <AppSidebar
-          subjects={subjects}
-          selectedSubjectId={selectedSubjectId}
+          subjects={subjectsController.subjects}
+          selectedSubjectId={subjectsController.selectedSubjectId}
+          selectedConversationId={
+            conversationsController.selectedConversationId
+          }
+          conversationsBySubject={
+            conversationsController.conversationsBySubject
+          }
+          loadingConversationsSubjectId={
+            conversationsController.loadingConversationsSubjectId
+          }
           onSelectSubject={handleSelectSubject}
-          onCreateSubject={handleOpenCreateSubject}
-          onEditSubject={handleOpenEditSubject}
+          onSelectConversation={handleSelectConversation}
+          onCreateConversation={handleCreateConversation}
+          onCreateSubject={subjectPanel.handleOpenCreateSubject}
+          onEditSubject={subjectPanel.handleOpenEditSubject}
         />
 
         <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.035] shadow-[0_24px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           <section className="flex min-h-0 flex-1 flex-col px-8 py-10">
-            {isLoadingSubjects ? (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-zinc-400">Cargando materias...</p>
-              </div>
-            ) : messages.length > 0 ? (
-              <div className="flex min-h-0 flex-1 flex-col">
-                <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={[
-                        "max-w-[68%] rounded-3xl px-5 py-4 text-sm leading-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
-                        message.role === "user"
-                          ? "ml-auto bg-emerald-300 text-zinc-950"
-                          : "mr-auto border border-white/[0.08] bg-white/[0.06] text-zinc-100",
-                      ].join(" ")}
-                    >
-                      {message.content}
-                    </div>
-                  ))}
-
-                  {isAsking && (
-                    <div className="mr-auto max-w-[68%] rounded-3xl border border-white/[0.08] bg-white/[0.06] px-5 py-4 text-sm text-zinc-400">
-                      Pensando con tus documentos...
-                    </div>
-                  )}
-
-                  <div ref={messagesEndRef} />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-1 items-center justify-center">
-                <UploadHero
-                  disabled={!selectedSubjectId}
-                  isUploading={isUploadingDocument}
-                  statusMessage={uploadStatusMessage}
-                  onUploadFile={handleUploadFile}
-                />
-              </div>
-            )}
+            <WorkspaceMain
+              isLoadingSubjects={subjectsController.isLoadingSubjects}
+              isLoadingMessages={messagesController.isLoadingMessages}
+              selectedSubjectId={subjectsController.selectedSubjectId}
+              selectedConversationId={
+                conversationsController.selectedConversationId
+              }
+              messages={messagesController.messages}
+              isAsking={messagesController.isAsking}
+              isUploadingDocument={documentsController.isUploadingDocument}
+              uploadStatusMessage={documentsController.uploadStatusMessage}
+              messagesEndRef={messagesEndRef}
+              onUploadFile={handleUploadFile}
+            />
           </section>
 
           <div className="border-t border-white/[0.08] px-6 py-5">
             <ChatComposer
-              disabled={!selectedSubjectId}
-              isSubmitting={isAsking}
-              isUploading={isUploadingDocument}
+              disabled={
+                !subjectsController.selectedSubjectId ||
+                !conversationsController.selectedConversationId ||
+                messagesController.isLoadingMessages
+              }
+              isSubmitting={messagesController.isAsking}
+              isUploading={documentsController.isUploadingDocument}
               onSubmitMessage={handleSubmitMessage}
               onUploadFile={handleUploadFile}
             />
@@ -354,23 +278,10 @@ export function StudyWorkspacePage() {
         </main>
 
         <RightInspector
-          documents={documents}
-          isLoadingDocuments={isLoadingDocuments}
+          documents={documentsController.documents}
+          isLoadingDocuments={documentsController.isLoadingDocuments}
         />
       </div>
-    </div>
-  );
-}
-
-function BackgroundEffects() {
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      <div className="absolute left-[-10rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-emerald-400/10 blur-3xl" />
-      <div className="absolute bottom-[-12rem] right-[10rem] h-[32rem] w-[32rem] rounded-full bg-cyan-400/10 blur-3xl" />
-      <div className="absolute right-[-10rem] top-[8rem] h-[26rem] w-[26rem] rounded-full bg-violet-500/10 blur-3xl" />
-
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.055),transparent_32rem)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_18rem)]" />
     </div>
   );
 }
