@@ -5,6 +5,8 @@ import { ChatComposer } from "../../widgets/ChatComposer/ChatComposer";
 import { RightInspector } from "../../widgets/RightInspector/RightInspector";
 import { SubjectFormPanel } from "../../widgets/SubjectFormPanel/SubjectFormPanel";
 
+import { getDocumentsBySubject } from "../../shared/api/documents";
+
 import { BackgroundEffects } from "./components/BackgroundEffects";
 import { WorkspaceMain } from "./components/WorkspaceMain";
 
@@ -83,7 +85,7 @@ export function StudyWorkspacePage() {
   async function handleSelectConversation(conversationId: string) {
     conversationsController.setSelectedConversationId(conversationId);
     documentsController.clearUploadStatus();
-    studyItemsController.showChat();
+    studyItemsController.clearStudyItem();
 
     await messagesController.loadMessagesByConversation(conversationId);
   }
@@ -94,7 +96,7 @@ export function StudyWorkspacePage() {
     conversationsController.setLoadingConversationsSubjectId(subjectId);
     messagesController.setIsLoadingMessages(true);
     documentsController.clearUploadStatus();
-    studyItemsController.showChat();
+    studyItemsController.clearStudyItem();
 
     try {
       const subject = subjectsController.subjects.find(
@@ -202,13 +204,17 @@ export function StudyWorkspacePage() {
   }
 
   async function handleGenerateStudyItem(type: GeneratedItemType) {
-    if (!subjectsController.selectedSubjectId) {
+    if (
+      !subjectsController.selectedSubjectId ||
+      !conversationsController.selectedConversationId
+    ) {
       return;
     }
 
     try {
       await studyItemsController.generateStudyItemForSubject(
         subjectsController.selectedSubjectId,
+        conversationsController.selectedConversationId,
         type
       );
     } catch {
@@ -222,7 +228,13 @@ export function StudyWorkspacePage() {
         const loadedSubjects = await subjectsController.loadSubjects();
 
         if (loadedSubjects.length > 0) {
-          await handleSelectSubject(loadedSubjects[0].id);
+          await Promise.all([
+            handleSelectSubject(loadedSubjects[0].id),
+            ...loadedSubjects.slice(1).map(async (subject) => {
+              const docs = await getDocumentsBySubject(subject.id);
+              subjectsController.updateSubjectDocumentCount(subject.id, docs.length);
+            }),
+          ]);
         }
       } catch (error) {
         console.error("Error cargando materias:", error);

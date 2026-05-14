@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
+import { MathText } from "../../../shared/ui/MathText";
+
 
 import type {
   GeneratedItem,
@@ -95,7 +97,7 @@ export function QuizViewer({ item, onBackToChat }: QuizViewerProps) {
           </p>
 
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
-            {getItemTitle(item)}
+            <MathText text={getItemTitle(item)} />
           </h2>
 
           <p className="mt-2 text-sm text-zinc-400">
@@ -141,7 +143,7 @@ export function QuizViewer({ item, onBackToChat }: QuizViewerProps) {
           </div>
 
           <h3 className="text-2xl font-semibold leading-snug text-zinc-50">
-            {currentQuestion.question}
+            <MathText text={currentQuestion.question} />
           </h3>
 
           <div className="mt-7 grid gap-3">
@@ -179,7 +181,7 @@ export function QuizViewer({ item, onBackToChat }: QuizViewerProps) {
                   </span>
 
                   <span className="text-sm leading-6 text-zinc-200">
-                    {option}
+                    <MathText text={option} />
                   </span>
                 </button>
               );
@@ -193,7 +195,7 @@ export function QuizViewer({ item, onBackToChat }: QuizViewerProps) {
               </p>
 
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                {currentQuestion.explanation}
+                <MathText text={currentQuestion.explanation} />
               </p>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { BookOpenCheck, CheckCircle2, ListChecks } from "lucide-react";
-
+import { MathText } from "../../../shared/ui/MathText";
 import type {
   GeneratedItem,
   SummaryContent,
@@ -52,7 +52,7 @@ export function SummaryViewer({ item, onBackToChat }: SummaryViewerProps) {
           </p>
 
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
-            {summary.title}
+            <MathText text={summary.title} />
           </h2>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
@@ -83,7 +83,7 @@ export function SummaryViewer({ item, onBackToChat }: SummaryViewerProps) {
                 </h3>
 
                 <p className="mt-3 text-sm leading-7 text-zinc-300">
-                  {summary.overview}
+                  <MathText text={summary.overview} />
                 </p>
               </div>
             </div>
@@ -114,7 +114,7 @@ export function SummaryViewer({ item, onBackToChat }: SummaryViewerProps) {
                   >
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
 
-                    <p className="text-sm leading-6 text-zinc-300">{point}</p>
+                    <MathText text={point} />
                   </div>
                 ))}
               </div>
@@ -144,12 +144,12 @@ export function SummaryViewer({ item, onBackToChat }: SummaryViewerProps) {
                       </span>
 
                       <h4 className="text-base font-semibold text-zinc-100">
-                        {section.heading}
+                        <MathText text={section.heading} />
                       </h4>
                     </div>
 
                     <p className="text-sm leading-7 text-zinc-400">
-                      {section.body}
+                      <MathText text={section.body} />
                     </p>
                   </article>
                 ))}

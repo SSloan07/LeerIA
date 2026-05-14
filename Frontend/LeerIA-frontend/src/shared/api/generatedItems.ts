@@ -56,6 +56,7 @@ export type GeneratedItemContent =
 export type GeneratedItem = {
   id: string;
   subject_id: string;
+  conversation_id: string;
   document_id: string | null;
   type: GeneratedItemType;
   content: GeneratedItemContent;
@@ -67,6 +68,7 @@ export type GeneratedItem = {
 
 export type GenerateStudyItemPayload = {
   subject_id: string;
+  conversation_id: string;
   type: GeneratedItemType;
   document_id?: string | null;
   force?: boolean;
@@ -102,6 +104,7 @@ export async function generateStudyItem(
     },
     body: JSON.stringify({
       subject_id: payload.subject_id,
+      conversation_id: payload.conversation_id,
       type: payload.type,
       document_id: payload.document_id ?? null,
       force: payload.force ?? false,
@@ -118,20 +121,19 @@ export async function generateStudyItem(
 
 export async function getGeneratedItemsBySubject(
   subjectId: string,
+  conversationId: string,
   type?: GeneratedItemType
 ): Promise<GeneratedItem[]> {
   const params = new URLSearchParams();
+
+  params.set("conversation_id", conversationId);
 
   if (type) {
     params.set("type", type);
   }
 
-  const queryString = params.toString();
-
   const response = await fetch(
-    `${API_URL}/generated-items/subject/${subjectId}${
-      queryString ? `?${queryString}` : ""
-    }`
+    `${API_URL}/generated-items/subject/${subjectId}?${params.toString()}`
   );
 
   if (!response.ok) {

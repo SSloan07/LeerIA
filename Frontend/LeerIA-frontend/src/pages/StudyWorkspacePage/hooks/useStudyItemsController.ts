@@ -30,6 +30,7 @@ export function useStudyItemsController() {
 
   async function generateStudyItemForSubject(
     subjectId: string,
+    conversationId: string,
     type: GeneratedItemType
   ) {
     setActiveStudyType(type);
@@ -39,8 +40,9 @@ export function useStudyItemsController() {
     try {
       const item = await generateStudyItem({
         subject_id: subjectId,
+        conversation_id: conversationId,
         type,
-        force: false,
+        force: true,
         match_count: 12,
       });
 

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 
+import { MathText } from "../../../shared/ui/MathText";
+
 import type {
   FlashcardsContent,
   GeneratedItem,
@@ -84,7 +86,7 @@ export function FlashcardsViewer({
           </p>
 
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
-            {getItemTitle(item)}
+            <MathText text={getItemTitle(item)} />
           </h2>
 
           <p className="mt-2 text-sm text-zinc-400">
@@ -129,9 +131,9 @@ export function FlashcardsViewer({
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                      <p className="max-w-3xl text-center text-3xl font-semibold leading-[1.35] text-zinc-50">
-                        {currentCard.front}
-                      </p>
+                      <div className="max-w-3xl text-center text-3xl font-semibold leading-[1.35] text-zinc-50">
+                        <MathText text={currentCard.front} />
+                      </div>
                     </div>
 
                     <p className="text-center text-sm text-zinc-400">
@@ -154,9 +156,9 @@ export function FlashcardsViewer({
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                      <p className="max-w-3xl text-center text-xl leading-8 text-zinc-100">
-                        {currentCard.back}
-                      </p>
+                      <div className="max-w-3xl text-center text-xl leading-8 text-zinc-100">
+                        <MathText text={currentCard.back} />
+                      </div>
                     </div>
 
                     <p className="text-center text-sm text-zinc-400">
