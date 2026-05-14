@@ -168,6 +168,7 @@ def parse_llm_json(content: str) -> dict[str, Any]:
 
 def get_existing_generated_item(
     subject_id: UUID,
+    conversation_id: UUID,
     item_type: str,
     document_id: UUID | None = None,
 ):
@@ -176,6 +177,7 @@ def get_existing_generated_item(
         .table("generated_items")
         .select("*")
         .eq("subject_id", str(subject_id))
+        .eq("conversation_id", str(conversation_id))
         .eq("type", item_type)
         .order("created_at", desc=True)
         .limit(1)
@@ -194,6 +196,7 @@ def get_existing_generated_item(
 
 def save_generated_item(
     subject_id: UUID,
+    conversation_id: UUID,
     item_type: str,
     content: dict[str, Any],
     document_id: UUID | None = None,
@@ -201,6 +204,7 @@ def save_generated_item(
 ):
     data = {
         "subject_id": str(subject_id),
+        "conversation_id": str(conversation_id),
         "document_id": str(document_id) if document_id else None,
         "type": item_type,
         "content": content,
@@ -226,6 +230,7 @@ def save_generated_item(
 
 def generate_study_item_service(payload):
     subject_id = payload.subject_id
+    conversation_id = payload.conversation_id
     item_type = payload.type
     document_id = payload.document_id
     force = payload.force
@@ -234,6 +239,7 @@ def generate_study_item_service(payload):
     if not force:
         existing_item = get_existing_generated_item(
             subject_id=subject_id,
+            conversation_id=conversation_id,
             item_type=item_type,
             document_id=document_id,
         )
@@ -294,6 +300,7 @@ def generate_study_item_service(payload):
     metadata = {
         "model": CHAT_MODEL,
         "source": "subject_documents",
+        "conversation_id": str(conversation_id),
         "chunks_used": [chunk.get("id") for chunk in chunks],
         "similarities": [chunk.get("similarity") for chunk in chunks],
         "match_count": match_count,
@@ -301,6 +308,7 @@ def generate_study_item_service(payload):
 
     return save_generated_item(
         subject_id=subject_id,
+        conversation_id=conversation_id,
         item_type=item_type,
         document_id=document_id,
         content=generated_content,
@@ -310,6 +318,7 @@ def generate_study_item_service(payload):
 
 def get_generated_items_by_subject_service(
     subject_id: UUID,
+    conversation_id: UUID,
     item_type: str | None = None,
 ):
     query = (
@@ -317,6 +326,7 @@ def get_generated_items_by_subject_service(
         .table("generated_items")
         .select("*")
         .eq("subject_id", str(subject_id))
+        .eq("conversation_id", str(conversation_id))
         .order("created_at", desc=True)
     )
 

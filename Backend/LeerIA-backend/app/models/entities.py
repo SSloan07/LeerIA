@@ -17,7 +17,7 @@ class SubjectUpdate(BaseModel):
 class MessageCreate(BaseModel): 
     role: Literal["user", "assistant", "system"]
     content: str 
-    conversation_id : Optional[Dict[str, Any]] = {}
+    conversation_id : UUID
 
 
 
@@ -58,6 +58,7 @@ GeneratedItemType = Literal[
 
 class GeneratedItemGenerateRequest(BaseModel):
     subject_id: UUID
+    conversation_id: UUID
     type: GeneratedItemType
     document_id: UUID | None = None
     force: bool = False
@@ -66,6 +67,7 @@ class GeneratedItemGenerateRequest(BaseModel):
 
 class GeneratedItemResponse(BaseModel):
     id: UUID
+    conversation_id: UUID
     subject_id: UUID
     document_id: UUID | None = None
     type: GeneratedItemType
