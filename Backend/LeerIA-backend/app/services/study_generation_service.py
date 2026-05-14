@@ -52,6 +52,11 @@ Reglas obligatorias:
 4. No uses Markdown.
 5. No agregues texto fuera del JSON.
 6. El contenido debe estar en español.
+7. Si incluyes fórmulas, variables matemáticas, funciones, intervalos, subíndices, superíndices, integrales, derivadas, vectores, operadores como gradiente, divergencia, rotacional o expresiones algebraicas, escríbelas en LaTeX.
+8. Toda fórmula en línea debe ir obligatoriamente entre delimitadores \\( ... \\).
+9. Toda fórmula larga debe ir obligatoriamente entre delimitadores \\[ ... \\].
+10. Nunca escribas expresiones como f_{X,Y}(x,y), x^2, k(x+y), div(rot F), rot F, grad f, 0 ≤ x ≤ 1 o integrales fuera de delimitadores LaTeX.
+11. Para operadores vectoriales usa notación LaTeX, por ejemplo: \\( \\nabla \\cdot (\\nabla \\times \\mathbf{F}) = 0 \\).
 """.strip()
 
     if item_type == "summary":
@@ -73,26 +78,34 @@ Genera un JSON con esta estructura exacta:
 
     elif item_type == "quiz":
         schema = """
-Genera un JSON con esta estructura exacta:
+    Genera un JSON con esta estructura exacta:
 
-{
-  "title": "string",
-  "questions": [
     {
-      "question": "string",
-      "options": ["string", "string", "string", "string"],
-      "correct_answer": 0,
-      "explanation": "string"
+    "title": "string",
+    "questions": [
+        {
+        "question": "string",
+        "options": ["string", "string", "string", "string"],
+        "correct_answer": 0,
+        "explanation": "string"
+        }
+    ]
     }
-  ]
-}
 
-Reglas específicas:
-- Genera entre 5 y 8 preguntas.
-- correct_answer debe ser el índice numérico de la opción correcta.
-- El índice empieza en 0.
-- Cada pregunta debe tener exactamente 4 opciones.
-""".strip()
+    Reglas específicas:
+    - Genera entre 5 y 8 preguntas.
+    - correct_answer debe ser el índice numérico de la opción correcta.
+    - El índice empieza en 0.
+    - Cada pregunta debe tener exactamente 4 opciones.
+    - Si una pregunta, opción o explicación contiene fórmulas, símbolos matemáticos, integrales, derivadas, vectores, gradiente, divergencia, rotacional o productos punto/cruz, escríbelos siempre en LaTeX.
+    - Toda fórmula en línea debe ir entre delimitadores \\( ... \\).
+    - Toda fórmula larga debe ir entre delimitadores \\[ ... \\].
+    - No escribas fórmulas como texto plano.
+    - Ejemplo correcto: "\\( \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot d\\mathbf{S} = \\oint_C \\mathbf{F} \\cdot d\\mathbf{r} \\)".
+    - Ejemplo incorrecto: "∫∫_S (rot F) · dS = ∫_C F · dα".
+    - Ejemplo correcto: "\\( \\iiint_V \\nabla \\cdot \\mathbf{F}\\, dV = \\iint_S \\mathbf{F} \\cdot \\mathbf{n}\\, dS \\)".
+    - Ejemplo incorrecto: "∫∫∫_V div F dV = ∫∫_S F · n dS".
+    """.strip()
 
     elif item_type == "flashcards":
         schema = """
@@ -113,6 +126,9 @@ Reglas específicas:
 - front debe ser una pregunta, concepto o término.
 - back debe ser una respuesta clara y breve.
 - Las tarjetas deben servir para estudiar activamente.
+- Si una tarjeta contiene fórmulas, escríbelas siempre con delimitadores LaTeX.
+- Ejemplo correcto: "La divergencia del rotacional cumple \\( \\nabla \\cdot (\\nabla \\times \\mathbf{F}) = 0 \\)".
+- Ejemplo incorrecto: "La divergencia del rotacional cumple div(rot F) = 0".
 """.strip()
 
     elif item_type == "video_script":
@@ -247,7 +263,12 @@ def generate_study_item_service(payload):
         if existing_item:
             return existing_item
 
-    generation_query = build_generation_query(item_type)
+    conversation_context = get_conversation_context(conversation_id)
+
+    generation_query = build_contextual_generation_query(
+        item_type=item_type,
+        conversation_context=conversation_context,
+    )
 
     chunks = retrieve_relevant_chunks(
         subject_id=str(subject_id),
@@ -262,10 +283,16 @@ def generate_study_item_service(payload):
         )
 
     context = build_context_from_chunks(chunks)
-
+    # Esta fue una de las muchas cosas que tocó hacer porque mis compañeros no escucharon
     prompt = build_generation_prompt(
         item_type=item_type,
-        context=context,
+        context=f"""
+    CONTEXTO RECIENTE DE LA CONVERSACIÓN:
+    {conversation_context}
+
+    FRAGMENTOS DOCUMENTALES RECUPERADOS:
+    {context}
+    """.strip(),
     )
 
     response = client.chat.completions.create(
@@ -372,3 +399,41 @@ def delete_generated_item_service(item_id: UUID):
         )
 
     return response.data[0]
+
+def get_conversation_context(conversation_id: UUID, limit: int = 6) -> str:
+    response = (
+        supabase
+        .table("messages")
+        .select("role, content, created_at")
+        .eq("conversation_id", str(conversation_id))
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    if not response.data:
+        return ""
+
+    messages = list(reversed(response.data))
+
+    return "\n".join(
+        f"{message['role']}: {message['content']}"
+        for message in messages
+        if message.get("content")
+    )
+
+def build_contextual_generation_query(
+    item_type: str,
+    conversation_context: str,
+) -> str:
+    base_query = build_generation_query(item_type)
+
+    if not conversation_context:
+        return base_query
+
+    return f"""
+{base_query}
+
+Contexto reciente de la conversación:
+{conversation_context}
+""".strip()
