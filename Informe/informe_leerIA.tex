@@ -351,7 +351,7 @@
 		\item el backend recupera fragmentos relevantes de los documentos;
 		\item el modelo generativo produce una respuesta estructurada;
 		\item el resultado se guarda en la tabla \texttt{generated\_items};
-		\item el frontend renderiza el material en una vista especializada.
+		\item el frontend renderiza el material en una vista especializada o en una vista genérica según el tipo de artefacto.
 	\end{enumerate}
 	
 	\subsection{Frontend}
@@ -360,7 +360,7 @@
 	
 	\begin{itemize}
 		\item \textbf{Sidebar izquierdo}: muestra materias y conversaciones.
-		\item \textbf{Área central}: muestra chat, estado vacío, resúmenes, quizzes o flashcards.
+		\item \textbf{Área central}: muestra chat, estado vacío, resúmenes, quizzes, flashcards o artefactos generados en formato estructurado.
 		\item \textbf{Panel derecho}: muestra herramientas de estudio, documentos recientes y estado del sistema.
 	\end{itemize}
 	
@@ -620,7 +620,7 @@
 		\item escribir preguntas;
 		\item recibir respuestas del asistente;
 		\item generar materiales de estudio desde el panel lateral;
-		\item visualizar resúmenes, quizzes y flashcards.
+		\item visualizar resúmenes, quizzes, flashcards y guiones de video generados.
 	\end{itemize}
 	
 	La interfaz cumple el requisito de interacción directa con el sistema, ya que el usuario no necesita ejecutar scripts ni manipular archivos manualmente. Todo el flujo se realiza desde la aplicación web.
@@ -663,6 +663,7 @@
 		cd Backend/LeerIA-backend
 		python -m venv .venv
 		source .venv/bin/activate
+		# En Windows PowerShell: .\.venv\Scripts\Activate.ps1
 		pip install -r requirements.txt
 		fastapi dev app/main.py
 	\end{lstlisting}
@@ -682,6 +683,7 @@
 	\begin{lstlisting}
 		SUPABASE_URL=...
 		SUPABASE_SERVICE_ROLE_KEY=...
+		SUPABASE_BUCKET=...
 		OPENAI_API_KEY=...
 	\end{lstlisting}
 	
@@ -690,6 +692,8 @@
 	\begin{lstlisting}
 		VITE_API_URL=http://127.0.0.1:8000/api/v1
 	\end{lstlisting}
+	
+	Además de estas variables, la base de datos de Supabase debe contar con las tablas usadas por el backend, como \texttt{subjects}, \texttt{documents}, \texttt{document\_chunks}, \texttt{conversations}, \texttt{messages} y \texttt{generated\_items}. Para la recuperación semántica, también debe existir la función RPC \texttt{match\_document\_chunks}, encargada de comparar el embedding de la consulta con los embeddings almacenados en los fragmentos documentales.
 	
 	
 	
