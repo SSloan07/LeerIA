@@ -1,0 +1,2 @@
+1. En la vista general, si ve una materia, los documentos no aparecen hasta que se abre la materia.
+2. Hacer que las flashcards se recuperen por contexto, no solo una vez.

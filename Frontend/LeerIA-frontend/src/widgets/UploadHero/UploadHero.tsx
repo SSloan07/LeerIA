@@ -1,6 +1,12 @@
-import { Lock, UploadCloud } from "lucide-react";
+import {
+  BookOpenText,
+  HelpCircle,
+  Layers,
+  Lock,
+  UploadCloud,
+} from "lucide-react";
 
-import { quickActions, studyMetrics } from "../../shared/data/mock-data";
+import { quickActions } from "../../shared/data/mock-data";
 
 type UploadHeroProps = {
   disabled?: boolean;
@@ -8,6 +14,36 @@ type UploadHeroProps = {
   statusMessage?: string | null;
   onUploadFile: (file: File) => void | Promise<void>;
 };
+
+const heroCapabilities = [
+  {
+    id: "summaries",
+    icon: BookOpenText,
+    title: "Resúmenes claros",
+    description:
+      "Convierte documentos extensos en ideas principales, secciones organizadas y explicaciones fáciles de repasar.",
+    iconClassName:
+      "border border-emerald-300/20 bg-emerald-300/10 text-emerald-300",
+  },
+  {
+    id: "quizzes",
+    icon: HelpCircle,
+    title: "Quizzes de práctica",
+    description:
+      "Genera preguntas para comprobar comprensión, practicar antes de un examen y detectar conceptos débiles.",
+    iconClassName:
+      "border border-violet-300/20 bg-violet-300/10 text-violet-300",
+  },
+  {
+    id: "flashcards",
+    icon: Layers,
+    title: "Flashcards activas",
+    description:
+      "Transforma conceptos clave en tarjetas de estudio para memorizar definiciones, fórmulas e ideas centrales.",
+    iconClassName:
+      "border border-amber-300/20 bg-amber-300/10 text-amber-300",
+  },
+];
 
 export function UploadHero({
   disabled = false,
@@ -98,40 +134,40 @@ export function UploadHero({
       <section className="mt-10 w-full rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-5 text-left shadow-inner shadow-white/[0.02]">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-zinc-100">
-            Lo que la IA puede generar
+            Herramientas que puedes generar
           </h3>
 
-          <span className="text-xs text-zinc-500">Vista previa</span>
+          <span className="text-xs text-zinc-500">
+            Vista promocional
+          </span>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          {studyMetrics.map((metric) => {
-            const Icon = metric.icon;
+          {heroCapabilities.map((capability) => {
+            const Icon = capability.icon;
 
             return (
               <article
-                key={metric.id}
-                className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4"
+                key={capability.id}
+                className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 transition hover:border-emerald-300/20 hover:bg-white/[0.05]"
               >
                 <div className="flex items-start gap-3">
                   <div
                     className={[
                       "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-                      metric.iconClassName,
+                      capability.iconClassName,
                     ].join(" ")}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
 
                   <div>
-                    <p className="text-3xl font-semibold tracking-tight text-zinc-50">
-                      {metric.value}
+                    <p className="text-sm font-semibold text-zinc-50">
+                      {capability.title}
                     </p>
-                    <p className="mt-1 text-sm font-medium text-zinc-200">
-                      {metric.label}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {metric.description}
+
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      {capability.description}
                     </p>
                   </div>
                 </div>

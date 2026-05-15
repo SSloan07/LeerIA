@@ -40,7 +40,7 @@ export function SubjectList({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto">
         {subjects.map((subject) => {
           const selected = subject.id === selectedSubjectId;
           const conversations = conversationsBySubject[subject.id] ?? [];

@@ -86,18 +86,7 @@ export function RightInspector({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <IconButton label="Buscar">
-            <Search className="h-4 w-4" />
-          </IconButton>
-
-          <IconButton label="Notificaciones">
-            <span className="relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-300" />
-            </span>
-          </IconButton>
-        </div>
+      
       </header>
 
       <section className="rounded-[1.6rem] border border-emerald-300/15 bg-emerald-300/[0.055] p-4">
